@@ -31,6 +31,8 @@ ADMIN_ID = int(os.environ.get("ADMIN_ID", "6527942155"))
 ALLOWED_GROUP_ID = int(os.environ.get("ALLOWED_GROUP_ID", "-1003706444239"))
 
 SILENCED_USERS = {}
+# Naya feature: Bot ki yaaddash (Memory) taaki wo insaano ki tarah pichli baat yaad rakhe
+CHAT_HISTORY = {} 
 
 def get_all_api_keys():
     keys = []
@@ -75,31 +77,50 @@ def is_authorized(update: Update) -> bool:
     return False
 
 # ================= AI LOGIC =================
-async def ai_chat(user_input):
+async def ai_chat(user_input, chat_id, user_name):
     max_retries = len(API_KEYS) if API_KEYS else 1
     attempts = 0
-    # Update: Added instruction to use unique and context-relevant emojis
+    
+    # Prompt ko ekdum human-like aur natural banaya gaya hai
     system_prompt = (
-        "You are 'Santosh Dev AI'. Helpful study expert and friendly chatter. "
-        "Correct wrong answers, solve doubts, under 185 chars. Hindi-English mix. "
-        "Always use 1-2 unique and context-relevant emojis in your responses to make them engaging."
+        "Tum ek friendly aur smart human assistant ho jiska naam 'Santosh Dev' hai. "
+        "Tum ek dost ki tarah naturally baat karte ho. "
+        "Baat-cheet mein Hindi (Hinglish) aur English ka mix use karo. "
+        "Har sawal ka pura aur sahi jawab do, sentences ko aade mein mat chodo. "
+        "Answers short, clear aur engaging rakhna (2-4 lines). "
+        "Context aur sawal ke hisaab se 1-2 unique emojis ka use karo."
     )
+
+    # Pichli baatein (Memory) add karna
+    messages = [{"role": "system", "content": system_prompt}]
+    if chat_id in CHAT_HISTORY:
+        messages.extend(CHAT_HISTORY[chat_id])
+    
+    # Naya message add karna
+    messages.append({"role": "user", "content": f"{user_name}: {user_input}"})
 
     while attempts < max_retries:
         client = get_client()
         if not client: 
             return "Groq API Key missing hai bhai! Render Environment Variables me check karo. 🛑"
         try:
+            # max_tokens badhaya gaya hai taaki aade me baat na kate
             response = await client.chat.completions.create(
                 model="llama-3.1-8b-instant", 
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_input}
-                ],
-                max_tokens=80,
+                messages=messages,
+                max_tokens=300, 
                 temperature=0.7
             )
-            return response.choices[0].message.content.strip()
+            bot_reply = response.choices[0].message.content.strip()
+            
+            # History me ye conversation save karna (Sirf last 10 messages rakhenge memory bachane ke liye)
+            if chat_id not in CHAT_HISTORY:
+                CHAT_HISTORY[chat_id] = []
+            CHAT_HISTORY[chat_id].append({"role": "user", "content": f"{user_name}: {user_input}"})
+            CHAT_HISTORY[chat_id].append({"role": "assistant", "content": bot_reply})
+            CHAT_HISTORY[chat_id] = CHAT_HISTORY[chat_id][-10:]
+            
+            return bot_reply
         except RateLimitError:
             logger.warning("Rate limit hit, key rotate kar raha hoon...")
             if not rotate_key(): break
@@ -114,7 +135,6 @@ async def ai_chat(user_input):
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Naya user jab bot start kare toh usko welcome message milega (Agar authorized hai)"""
     if not is_authorized(update):
-        # Unauthorized users ko block karo
         logger.warning(f"Unauthorized /start attempt by User: {update.effective_user.id}")
         return
 
@@ -164,18 +184,29 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths"]
     chat_keywords = ["hi", "hello", "kaise ho", "kya kar rahe"]
     
+    # Agar user seedha bot ke message ka reply kare
+    is_reply_to_bot = False
+    if update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id:
+        is_reply_to_bot = True
+    
     should_reply = False
-    if bot_name in text: should_reply = True
-    elif any(word in text for word in study_keywords): should_reply = True
-    elif chat_type == "private": should_reply = True
-    elif any(text.startswith(word) for word in chat_keywords): should_reply = True
+    if bot_name in text or is_reply_to_bot: 
+        should_reply = True
+    elif any(word in text for word in study_keywords): 
+        should_reply = True
+    elif chat_type == "private": 
+        should_reply = True
+    elif any(text.startswith(word) for word in chat_keywords): 
+        should_reply = True
 
     if should_reply:
         try:
             await context.bot.send_chat_action(chat_id=chat_id, action='typing')
             
-            response = await ai_chat(f"User {user_name}: {update.message.text}")
-            final_res = (response[:147] + "..") if len(response) > 150 else response
+            # Context aur yaaddash ke sath AI ko bhejna
+            final_res = await ai_chat(user_input=update.message.text, chat_id=chat_id, user_name=user_name)
+            
+            # Yahan se strict character kaatne wali limit hata di gayi hai
             await update.message.reply_text(final_res)
         except Exception as e:
             logger.error(f"Handler Error: {e}")
