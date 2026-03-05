@@ -78,15 +78,17 @@ def is_authorized(update: Update) -> bool:
 async def ai_chat(user_input):
     max_retries = len(API_KEYS) if API_KEYS else 1
     attempts = 0
+    # Update: Added instruction to use unique and context-relevant emojis
     system_prompt = (
         "You are 'Santosh Dev AI'. Helpful study expert and friendly chatter. "
-        "Correct wrong answers, solve doubts, under 145 chars. Hindi-English mix."
+        "Correct wrong answers, solve doubts, under 185 chars. Hindi-English mix. "
+        "Always use 1-2 unique and context-relevant emojis in your responses to make them engaging."
     )
 
     while attempts < max_retries:
         client = get_client()
         if not client: 
-            return "Groq API Key missing hai bhai! Render Environment Variables me check karo."
+            return "Groq API Key missing hai bhai! Render Environment Variables me check karo. 🛑"
         try:
             response = await client.chat.completions.create(
                 model="llama-3.1-8b-instant", 
@@ -106,7 +108,7 @@ async def ai_chat(user_input):
             logger.error(f"AI Error: {e}")
             if not rotate_key(): break
             attempts += 1
-    return "Server thoda down hai bhai, thodi der me try karna!"
+    return "Server thoda down hai bhai, thodi der me try karna! 🛠️"
 
 # ================= TELEGRAM COMMANDS =================
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -121,7 +123,7 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"Namaste {user_name}! 🙏 Main Santosh Dev AI hoon.\n\n"
         "Aap mujhse padhai ke doubts (Physics, Maths) pooch sakte hain. "
-        "Mujhe check karne ke liye /ping likhein!"
+        "Mujhe check karne ke liye /ping likhein! ✨"
     )
 
 async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -130,7 +132,7 @@ async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     logger.info(f"📥 Received Ping! Chat ID: {update.effective_chat.id}")
-    await update.message.reply_text("Pong! 🏓 Bot 100% zinda hai aur sirf is group/admin ke liye kaam kar raha hai.")
+    await update.message.reply_text("Pong! 🏓 Bot 100% zinda hai aur sirf is group/admin ke liye kaam kar raha hai. 🛡️")
 
 # ================= TELEGRAM HANDLER =================
 async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -152,7 +154,7 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if "santosh dev" in text and "chup raho" in text:
         SILENCED_USERS[user_id] = time.time() + 3600
-        await update.message.reply_text(f"Theek hai {user_name}, 1 ghante ki shanti. 🤫")
+        await update.message.reply_text(f"Theek hai {user_name}, 1 ghante ki shanti. 🤫🤐")
         return
 
     if user_id in SILENCED_USERS and time.time() < SILENCED_USERS[user_id]:
@@ -217,7 +219,7 @@ def run_flask():
 
 @app.route("/")
 def index():
-    return "Santosh Dev AI is running smoothly on Render!"
+    return "Santosh Dev AI is running smoothly on Render! 🚀"
 
 if __name__ == '__main__':
     logger.info("🚀 Secure Santosh Dev AI starting...")
