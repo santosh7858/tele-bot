@@ -81,14 +81,16 @@ async def ai_chat(user_input, chat_id, user_name):
     max_retries = len(API_KEYS) if API_KEYS else 1
     attempts = 0
     
-    # Prompt ko ekdum human-like aur natural banaya gaya hai
+    # Prompt ko human-like, adaptive aur smart banaya gaya hai
     system_prompt = (
-        "Tum ek friendly aur smart human assistant ho jiska naam 'Santosh Dev' hai. "
-        "Tum ek dost ki tarah naturally baat karte ho. "
-        "Baat-cheet mein Hindi (Hinglish) aur English ka mix use karo. "
-        "Har sawal ka pura aur sahi jawab do, sentences ko aade mein mat chodo. "
-        "Answers short, clear aur engaging rakhna (2-4 lines). "
-        "Context aur sawal ke hisaab se 1-2 unique emojis ka use karo."
+        "Tumhara naam 'Santosh Dev' hai. Tum ek group ke normal, smart aur friendly member ho (AI bilkul nahi lagna chahiye). "
+        "Rules:\n"
+        "1. Baar-baar apna introduction ('Main Santosh Dev hoon') mat do. Direct baat shuru karo.\n"
+        "2. Samne wale ki tone aur vibe ko pakdo. Agar wo casual hain toh tum bhi casual raho. Hindi, Hinglish aur English ka mix use karo.\n"
+        "3. Agar baat comedy, love, ya entertainment ki ho, toh pure fun, roasting, ya dosti wale mood me reply karo.\n"
+        "4. Agar koi study doubt puche, question kare, ya koi aur galat jawab de, toh ek expert ki tarah usko sahi jawab do aur correct karo.\n"
+        "5. Ek human ki tarah bina ruke naturally flow me baat karo. 1-2 unique emojis ka use karo jo baat se match karte hon.\n"
+        "6. Jawab engaging rakho, bahut lamba paragraph mat likhna."
     )
 
     # Pichli baatein (Memory) add karna
@@ -104,12 +106,12 @@ async def ai_chat(user_input, chat_id, user_name):
         if not client: 
             return "Groq API Key missing hai bhai! Render Environment Variables me check karo. 🛑"
         try:
-            # max_tokens badhaya gaya hai taaki aade me baat na kate
+            # max_tokens ko 400 kar diya gaya hai taaki sentences kabhi aade me cut na hon
             response = await client.chat.completions.create(
                 model="llama-3.1-8b-instant", 
                 messages=messages,
-                max_tokens=300, 
-                temperature=0.7
+                max_tokens=400, 
+                temperature=0.75
             )
             bot_reply = response.choices[0].message.content.strip()
             
@@ -141,9 +143,8 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     logger.info(f"🚀 /start command used by {user_name}")
     await update.message.reply_text(
-        f"Namaste {user_name}! 🙏 Main Santosh Dev AI hoon.\n\n"
-        "Aap mujhse padhai ke doubts (Physics, Maths) pooch sakte hain. "
-        "Mujhe check karne ke liye /ping likhein! ✨"
+        f"Namaste {user_name}! 🙏 Main Santosh Dev hoon.\n\n"
+        "Padhai ho ya masti, main dono me expert hoon! Pucho kya puchna hai. ✨"
     )
 
 async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -152,7 +153,7 @@ async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     logger.info(f"📥 Received Ping! Chat ID: {update.effective_chat.id}")
-    await update.message.reply_text("Pong! 🏓 Bot 100% zinda hai aur sirf is group/admin ke liye kaam kar raha hai. 🛡️")
+    await update.message.reply_text("Pong! 🏓 Bot 100% zinda hai aur group me active hai. 🛡️")
 
 # ================= TELEGRAM HANDLER =================
 async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -174,15 +175,17 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if "santosh dev" in text and "chup raho" in text:
         SILENCED_USERS[user_id] = time.time() + 3600
-        await update.message.reply_text(f"Theek hai {user_name}, 1 ghante ki shanti. 🤫🤐")
+        await update.message.reply_text(f"Theek hai bhai {user_name}, 1 ghante ke liye shant ho raha hoon. 🤐")
         return
 
     if user_id in SILENCED_USERS and time.time() < SILENCED_USERS[user_id]:
         return
 
     bot_name = "santosh"
-    study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths"]
-    chat_keywords = ["hi", "hello", "kaise ho", "kya kar rahe"]
+    
+    # Naye aur zyada smart keywords jo bot ko batayenge ki kab bolna hai
+    study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths", "chemistry", "question", "sawal", "kya hoga", "kaise hoga"]
+    fun_keywords = ["comedy", "joke", "haha", "hehe", "lol", "pyaar", "love", "gf", "bf", "movie", "song", "mazak", "masti", "entertainment", "bhai"]
     
     # Agar user seedha bot ke message ka reply kare
     is_reply_to_bot = False
@@ -190,13 +193,18 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
         is_reply_to_bot = True
     
     should_reply = False
-    if bot_name in text or is_reply_to_bot: 
+    
+    # 1. Agar sidha naam liya ya DM me ho, toh humesha reply karega
+    if bot_name in text or is_reply_to_bot or chat_type == "private": 
         should_reply = True
+    # 2. Agar group me study/wrong answer ka discussion chal raha ho
     elif any(word in text for word in study_keywords): 
         should_reply = True
-    elif chat_type == "private": 
+    # 3. Agar group me comedy, love ya fun ki baat ho rahi ho
+    elif any(word in text for word in fun_keywords): 
         should_reply = True
-    elif any(text.startswith(word) for word in chat_keywords): 
+    # 4. Agar koi question mark (?) se sawal puche
+    elif "?" in text:
         should_reply = True
 
     if should_reply:
@@ -206,7 +214,6 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Context aur yaaddash ke sath AI ko bhejna
             final_res = await ai_chat(user_input=update.message.text, chat_id=chat_id, user_name=user_name)
             
-            # Yahan se strict character kaatne wali limit hata di gayi hai
             await update.message.reply_text(final_res)
         except Exception as e:
             logger.error(f"Handler Error: {e}")
