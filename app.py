@@ -21,18 +21,19 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # ================= CONFIGURATION =================
-# WARNING: GitHub par kabhi apna real token mat likhna!
-# Render.com par "Environment Variables" mein TELEGRAM_TOKEN set karein
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 
 # SECURITY CONFIGURATION:
-# Yahan apna Telegram User ID aur Allowed Group ID daalein (Environment Variables se bhi set kar sakte hain)
+# Yahan apna Telegram User ID aur Allowed Group ID daalein
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "6527942155")) 
 ALLOWED_GROUP_ID = int(os.environ.get("ALLOWED_GROUP_ID", "-1003706444239"))
 
 SILENCED_USERS = {}
-# Naya feature: Bot ki yaaddash (Memory) taaki wo insaano ki tarah pichli baat yaad rakhe
 CHAT_HISTORY = {} 
+
+# NAYA FEATURE: Active Sessions track karega taaki baar baar naam na lena pade
+ACTIVE_SESSIONS = {}
+SESSION_TIMEOUT = 180  # 3 minute tak conversation active rahegi
 
 def get_all_api_keys():
     keys = []
@@ -68,10 +69,9 @@ def is_authorized(update: Update) -> bool:
     user_id = update.effective_user.id
 
     if chat_type == "private":
-        # Direct Message: Sirf Admin (Aap) use kar sakte hain
         return user_id == ADMIN_ID
     elif chat_type in ["group", "supergroup"]:
-        # Group: Sirf allowed group me chalega
+        # Group me sabhi log baat kar payenge, par group ALLOWED hona chahiye
         return chat_id == ALLOWED_GROUP_ID
         
     return False
@@ -81,32 +81,29 @@ async def ai_chat(user_input, chat_id, user_name):
     max_retries = len(API_KEYS) if API_KEYS else 1
     attempts = 0
     
-    # Prompt ko human-like, adaptive aur smart banaya gaya hai
+    # Prompt ko ekdum strict aur human-like banaya gaya hai
     system_prompt = (
-        "Tumhara naam 'Santosh Dev' hai. Tum ek group ke normal, smart aur friendly member ho (AI bilkul nahi lagna chahiye). "
-        "Rules:\n"
-        "1. Baar-baar apna introduction ('Main Santosh Dev hoon') mat do. Direct baat shuru karo.\n"
-        "2. Samne wale ki tone aur vibe ko pakdo. Agar wo casual hain toh tum bhi casual raho. Hindi, Hinglish aur English ka mix use karo.\n"
-        "3. Agar baat comedy, love, ya entertainment ki ho, toh pure fun, roasting, ya dosti wale mood me reply karo.\n"
-        "4. Agar koi study doubt puche, question kare, ya koi aur galat jawab de, toh ek expert ki tarah usko sahi jawab do aur correct karo.\n"
-        "5. Ek human ki tarah bina ruke naturally flow me baat karo. 1-2 unique emojis ka use karo jo baat se match karte hon.\n"
-        "6. Jawab engaging rakho, bahut lamba paragraph mat likhna."
+        "Tumhara naam 'Kanchan yadav' hai. Tum is Telegram group ke ek smart, funny aur normal human member ho (AI bilkul nahi lagna chahiye). "
+        "STRICT RULES: "
+        "1. KABHI BHI greetings use mat karo (jaise 'Namaste', 'Hi', 'Hello [Name]'). Seedhe reply karo. "
+        "2. KABHI BHI apna intro mat do ('Main Santosh hoon'). "
+        "3. Agar user koi chota jawab de (jaise '100', 'haan', 'ok'), toh samjho wo tumhare pichle sawal ya baat ka jawab de raha hai. Usi flow me aage baat karo. "
+        "4. Agar baat comedy, love, ya masti ki ho, toh group ke dosto ki tarah funny reply do. Agar doubt ho toh expert ki tarah solve karo. "
+        "5. Har message me 1-2 unique aur mast emojis zaroor lagao jo conversation se match karein. "
+        "6. Ek normal insaan ki tarah naturally aur flow me baat karo (Hinglish/Hindi me)."
     )
 
-    # Pichli baatein (Memory) add karna
     messages = [{"role": "system", "content": system_prompt}]
     if chat_id in CHAT_HISTORY:
         messages.extend(CHAT_HISTORY[chat_id])
     
-    # Naya message add karna
     messages.append({"role": "user", "content": f"{user_name}: {user_input}"})
 
     while attempts < max_retries:
         client = get_client()
         if not client: 
-            return "Groq API Key missing hai bhai! Render Environment Variables me check karo. 🛑"
+            return "API Key missing hai bhai! 🛑"
         try:
-            # max_tokens ko 400 kar diya gaya hai taaki sentences kabhi aade me cut na hon
             response = await client.chat.completions.create(
                 model="llama-3.1-8b-instant", 
                 messages=messages,
@@ -115,54 +112,39 @@ async def ai_chat(user_input, chat_id, user_name):
             )
             bot_reply = response.choices[0].message.content.strip()
             
-            # History me ye conversation save karna (Sirf last 10 messages rakhenge memory bachane ke liye)
             if chat_id not in CHAT_HISTORY:
                 CHAT_HISTORY[chat_id] = []
             CHAT_HISTORY[chat_id].append({"role": "user", "content": f"{user_name}: {user_input}"})
             CHAT_HISTORY[chat_id].append({"role": "assistant", "content": bot_reply})
-            CHAT_HISTORY[chat_id] = CHAT_HISTORY[chat_id][-10:]
+            CHAT_HISTORY[chat_id] = CHAT_HISTORY[chat_id][-12:] # History track karega
             
             return bot_reply
         except RateLimitError:
-            logger.warning("Rate limit hit, key rotate kar raha hoon...")
             if not rotate_key(): break
             attempts += 1
         except Exception as e:
             logger.error(f"AI Error: {e}")
             if not rotate_key(): break
             attempts += 1
-    return "Server thoda down hai bhai, thodi der me try karna! 🛠️"
+    return "Server down hai bhai! 🛠️"
 
 # ================= TELEGRAM COMMANDS =================
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Naya user jab bot start kare toh usko welcome message milega (Agar authorized hai)"""
     if not is_authorized(update):
-        logger.warning(f"Unauthorized /start attempt by User: {update.effective_user.id}")
         return
-
-    user_name = update.effective_user.first_name
-    logger.info(f"🚀 /start command used by {user_name}")
-    await update.message.reply_text(
-        f"Namaste {user_name}! 🙏 Main Santosh Dev hoon.\n\n"
-        "Padhai ho ya masti, main dono me expert hoon! Pucho kya puchna hai. ✨"
-    )
+    await update.message.reply_text("Aa gaya main! Pucho kya puchna hai. ✨")
 
 async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Test command"""
     if not is_authorized(update):
         return
-        
-    logger.info(f"📥 Received Ping! Chat ID: {update.effective_chat.id}")
-    await update.message.reply_text("Pong! 🏓 Bot 100% zinda hai aur group me active hai. 🛡️")
+    await update.message.reply_text("Pong! 🏓 Bot ekdum fast chal raha hai.")
 
 # ================= TELEGRAM HANDLER =================
 async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
         return
 
-    # Security Check
     if not is_authorized(update):
-        logger.warning(f"Unauthorized message attempt from User: {update.message.from_user.id} in Chat: {update.effective_chat.id}")
         return
 
     chat_id = update.effective_chat.id
@@ -170,131 +152,104 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
     user_name = update.message.from_user.first_name
     text = update.message.text.lower()
+    current_time = time.time()
 
-    logger.info(f"📥 Received in {chat_type} [{chat_id}]: '{update.message.text}'")
-
-    if "santosh dev" in text and "chup raho" in text:
-        SILENCED_USERS[user_id] = time.time() + 3600
-        await update.message.reply_text(f"Theek hai bhai {user_name}, 1 ghante ke liye shant ho raha hoon. 🤐")
+    if "Kanchan yadav" in text and "chup raho" in text:
+        SILENCED_USERS[user_id] = current_time + 3600
+        await update.message.reply_text(f"Theek hai {user_name}, 1 ghante ke liye shant. 🤐")
         return
 
-    if user_id in SILENCED_USERS and time.time() < SILENCED_USERS[user_id]:
+    if user_id in SILENCED_USERS and current_time < SILENCED_USERS[user_id]:
         return
 
     bot_name = "santosh"
+    study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths", "chemistry", "question", "sawal"]
+    fun_keywords = ["comedy", "joke", "haha", "hehe", "lol", "pyaar", "love", "gf", "bf", "movie", "song", "mazak", "masti", "entertainment"]
     
-    # Naye aur zyada smart keywords jo bot ko batayenge ki kab bolna hai
-    study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths", "chemistry", "question", "sawal", "kya hoga", "kaise hoga"]
-    fun_keywords = ["comedy", "joke", "haha", "hehe", "lol", "pyaar", "love", "gf", "bf", "movie", "song", "mazak", "masti", "entertainment", "bhai"]
-    
-    # Agar user seedha bot ke message ka reply kare
     is_reply_to_bot = False
     if update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id:
         is_reply_to_bot = True
+        
+    # Check if this user is in an active session with the bot (within last 3 mins)
+    is_active_session = False
+    if chat_id in ACTIVE_SESSIONS:
+        session = ACTIVE_SESSIONS[chat_id]
+        if session["user_id"] == user_id and (current_time - session["timestamp"] < SESSION_TIMEOUT):
+            is_active_session = True
     
     should_reply = False
     
-    # 1. Agar sidha naam liya ya DM me ho, toh humesha reply karega
     if bot_name in text or is_reply_to_bot or chat_type == "private": 
         should_reply = True
-    # 2. Agar group me study/wrong answer ka discussion chal raha ho
+    elif is_active_session:
+        # Agar user ne picchle 3 minute me bot se baat ki hai, toh seedha reply karega bina naam liye!
+        should_reply = True
     elif any(word in text for word in study_keywords): 
         should_reply = True
-    # 3. Agar group me comedy, love ya fun ki baat ho rahi ho
     elif any(word in text for word in fun_keywords): 
         should_reply = True
-    # 4. Agar koi question mark (?) se sawal puche
     elif "?" in text:
         should_reply = True
 
     if should_reply:
         try:
             await context.bot.send_chat_action(chat_id=chat_id, action='typing')
-            
-            # Context aur yaaddash ke sath AI ko bhejna
             final_res = await ai_chat(user_input=update.message.text, chat_id=chat_id, user_name=user_name)
-            
             await update.message.reply_text(final_res)
+            
+            # Message bhejne ke baad, session ko active mark karo
+            ACTIVE_SESSIONS[chat_id] = {
+                "user_id": user_id,
+                "timestamp": current_time
+            }
         except Exception as e:
             logger.error(f"Handler Error: {e}")
 
 # ================= NETWORK CHECKS =================
 def wait_for_internet():
-    """Network chalne tak shaanti se wait karega"""
-    logger.info("📡 Checking Internet and DNS connection...")
     while True:
         try:
-            # Pinging Telegram API via socket (Lightweight, won't crash async loops)
             socket.create_connection(("api.telegram.org", 443), timeout=5)
-            logger.info("🌐 Internet connected successfully! DNS is working.")
             break
-        except OSError as e:
-            logger.warning(f"⚠️ Network abhi start nahi hua. Retrying in 5 seconds... Error: {e}")
+        except OSError:
             time.sleep(5)
 
 webhook_cleared = False
 def clear_webhook():
-    """Ye function kisi purane atke hue webhook ko delete kar dega"""
     global webhook_cleared
-    if webhook_cleared:
-        return
+    if webhook_cleared: return
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/deleteWebhook?drop_pending_updates=True"
         req = urllib.request.Request(url)
-        with urllib.request.urlopen(req, timeout=10) as response:
-            res = json.loads(response.read().decode())
-            logger.info(f"🧹 Webhook Cleared: {res}")
-            webhook_cleared = True
-    except Exception as e:
-        logger.warning(f"Webhook clear warning: {e}")
+        urllib.request.urlopen(req, timeout=10)
+        webhook_cleared = True
+    except Exception:
+        pass
 
 # ================= RUNNER =================
 def run_flask():
-    """Runs Flask app in background for Render/Health checks"""
-    # Render default port 10000 use karta hai agar PORT env var nahi diya gaya ho
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
-@app.route("/")
-def index():
-    return "Santosh Dev AI is running smoothly on Render! 🚀"
-
 if __name__ == '__main__':
-    logger.info("🚀 Secure Santosh Dev AI starting...")
-    
     if not TELEGRAM_TOKEN:
-        logger.error("❌ TELEGRAM_TOKEN set nahi hai! Kripya Render ki Environment Variables me token dalein.")
         exit(1)
         
-    # 1. Start Flask
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
     
-    # 2. Wait for internet connection
     wait_for_internet()
     
-    # 3. Safe to start Telegram Bot
     while True:
         try:
-            # Naya Event loop set karo
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-
             clear_webhook()
-
-            logger.info("🤖 Initializing Telegram Bot...")
             application = ApplicationBuilder().token(TELEGRAM_TOKEN).connect_timeout(40).read_timeout(40).build()
-            
             application.add_handler(CommandHandler("start", start_cmd))
             application.add_handler(CommandHandler("ping", ping_cmd)) 
             application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_msg))
-
-            logger.info("✅ Telegram Bot is Online and Polling!")
-            
             application.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
             break
-            
-        except Exception as e:
-            logger.error(f"⚠️ Telegram Error aaya: {e}")
-            logger.info("🔄 10 seconds me dobara connect karne ki koshish kar raha hoon...")
+        except Exception:
             time.sleep(10)
