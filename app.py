@@ -81,16 +81,16 @@ async def ai_chat(user_input, chat_id, user_name):
     max_retries = len(API_KEYS) if API_KEYS else 1
     attempts = 0
     
-    # Prompt ko ekdum strict aur human-like banaya gaya hai
+    # Prompt ko Kanchan Yadav ke hisaab se fast, unique aur smart banaya gaya hai
     system_prompt = (
-        "Tumhara naam 'Kanchan yadav' hai. Tum is Telegram group ke ek smart, funny aur normal human member ho (AI bilkul nahi lagna chahiye). "
+        "Tumhara naam 'Kanchan Yadav' hai. Tum is Telegram group ki ek super smart, fast aur unique human member ho (AI bilkul nahi lagna chahiye). "
         "STRICT RULES: "
-        "1. KABHI BHI greetings use mat karo (jaise 'Namaste', 'Hi', 'Hello [Name]'). Seedhe reply karo. "
-        "2. KABHI BHI apna intro mat do ('Main Santosh hoon'). "
-        "3. Agar user koi chota jawab de (jaise '100', 'haan', 'ok'), toh samjho wo tumhare pichle sawal ya baat ka jawab de raha hai. Usi flow me aage baat karo. "
-        "4. Agar baat comedy, love, ya masti ki ho, toh group ke dosto ki tarah funny reply do. Agar doubt ho toh expert ki tarah solve karo. "
+        "1. KABHI BHI greetings use mat karo (jaise 'Namaste', 'Hi', 'Hello [Name]'). Seedhe point par aao aur fast reply karo. "
+        "2. KABHI BHI apna intro mat do ('Main Kanchan hoon'). "
+        "3. Agar user koi doubt puche, question kare, ya galat jawab de, toh ek expert ki tarah usko sabse unique aur aasan tarike se samjhao. "
+        "4. Agar baat comedy, love, ya masti ki ho, toh group ke dosto ki tarah funny aur witty reply do. "
         "5. Har message me 1-2 unique aur mast emojis zaroor lagao jo conversation se match karein. "
-        "6. Ek normal insaan ki tarah naturally aur flow me baat karo (Hinglish/Hindi me)."
+        "6. Ek normal insaan ki tarah naturally aur flow me baat karo (Hinglish/Hindi me). Chote 'haan', 'ok' wale messages ko pichli baat se jod kar dekho."
     )
 
     messages = [{"role": "system", "content": system_prompt}]
@@ -105,7 +105,7 @@ async def ai_chat(user_input, chat_id, user_name):
             return "API Key missing hai bhai! 🛑"
         try:
             response = await client.chat.completions.create(
-                model="llama-3.1-8b-instant", 
+                model="openai/gpt-oss-120b", 
                 messages=messages,
                 max_tokens=400, 
                 temperature=0.75
@@ -132,12 +132,12 @@ async def ai_chat(user_input, chat_id, user_name):
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
         return
-    await update.message.reply_text("Aa gaya main! Pucho kya puchna hai. ✨")
+    await update.message.reply_text("Aa gayi main! Pucho kya doubt hai tumhara. ✨")
 
 async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
         return
-    await update.message.reply_text("Pong! 🏓 Bot ekdum fast chal raha hai.")
+    await update.message.reply_text("Pong! 🏓 Kanchan ekdum fast chal rahi hai.")
 
 # ================= TELEGRAM HANDLER =================
 async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -154,7 +154,8 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.lower()
     current_time = time.time()
 
-    if "Kanchan yadav" in text and "chup raho" in text:
+    # Bot ka naam Kanchan Yadav kar diya gaya hai
+    if "kanchan yadav" in text and "chup raho" in text:
         SILENCED_USERS[user_id] = current_time + 3600
         await update.message.reply_text(f"Theek hai {user_name}, 1 ghante ke liye shant. 🤐")
         return
@@ -162,7 +163,8 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in SILENCED_USERS and current_time < SILENCED_USERS[user_id]:
         return
 
-    bot_name = "santosh"
+    # Trigger keyword update kar diya gaya hai
+    bot_name = "kanchan"
     study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths", "chemistry", "question", "sawal"]
     fun_keywords = ["comedy", "joke", "haha", "hehe", "lol", "pyaar", "love", "gf", "bf", "movie", "song", "mazak", "masti", "entertainment"]
     
@@ -179,6 +181,7 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     should_reply = False
     
+    # Ab ye 'kanchan' word par trigger hoga
     if bot_name in text or is_reply_to_bot or chat_type == "private": 
         should_reply = True
     elif is_active_session:
@@ -193,6 +196,7 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if should_reply:
         try:
+            # Typing action turant bheja jayega taaki fast feel ho
             await context.bot.send_chat_action(chat_id=chat_id, action='typing')
             final_res = await ai_chat(user_input=update.message.text, chat_id=chat_id, user_name=user_name)
             await update.message.reply_text(final_res)
