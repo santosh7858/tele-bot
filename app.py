@@ -235,6 +235,15 @@ def run_flask():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
+# NAYA ADDITION: Cron job (5 minute wale) ko 200 OK status dene ke liye
+@app.route("/", methods=['GET', 'HEAD'])
+def index():
+    return "Kanchan Yadav AI is awake and running! 🚀", 200
+
+@app.route("/<path:path>", methods=['GET', 'HEAD'])
+def catch_all(path):
+    return "Kanchan Yadav AI is awake and running! 🚀", 200
+
 if __name__ == '__main__':
     if not TELEGRAM_TOKEN:
         exit(1)
