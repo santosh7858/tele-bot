@@ -105,7 +105,7 @@ async def ai_chat(user_input, chat_id, user_name):
             return "API Key missing hai bhai! 🛑"
         try:
             response = await client.chat.completions.create(
-                model="openai/gpt-oss-120b", 
+                model="llama-3.1-8b-instant", 
                 messages=messages,
                 max_tokens=400, 
                 temperature=0.75
