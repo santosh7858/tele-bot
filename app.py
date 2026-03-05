@@ -24,6 +24,12 @@ app = Flask(__name__)
 # WARNING: GitHub par kabhi apna real token mat likhna!
 # Render.com par "Environment Variables" mein TELEGRAM_TOKEN set karein
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+
+# SECURITY CONFIGURATION:
+# Yahan apna Telegram User ID aur Allowed Group ID daalein (Environment Variables se bhi set kar sakte hain)
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "6527942155")) 
+ALLOWED_GROUP_ID = int(os.environ.get("ALLOWED_GROUP_ID", "-1003706444239"))
+
 SILENCED_USERS = {}
 
 def get_all_api_keys():
@@ -47,6 +53,25 @@ def rotate_key():
     if len(API_KEYS) > 1:
         current_key_index = (current_key_index + 1) % len(API_KEYS)
         return True
+    return False
+
+# ================= SECURITY CHECK =================
+def is_authorized(update: Update) -> bool:
+    """Check karta hai ki user ya group authorized hai ya nahi"""
+    if not update.effective_chat or not update.effective_user:
+        return False
+        
+    chat_id = update.effective_chat.id
+    chat_type = update.effective_chat.type
+    user_id = update.effective_user.id
+
+    if chat_type == "private":
+        # Direct Message: Sirf Admin (Aap) use kar sakte hain
+        return user_id == ADMIN_ID
+    elif chat_type in ["group", "supergroup"]:
+        # Group: Sirf allowed group me chalega
+        return chat_id == ALLOWED_GROUP_ID
+        
     return False
 
 # ================= AI LOGIC =================
@@ -85,7 +110,12 @@ async def ai_chat(user_input):
 
 # ================= TELEGRAM COMMANDS =================
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Naya user jab bot start kare toh usko welcome message milega"""
+    """Naya user jab bot start kare toh usko welcome message milega (Agar authorized hai)"""
+    if not is_authorized(update):
+        # Unauthorized users ko block karo
+        logger.warning(f"Unauthorized /start attempt by User: {update.effective_user.id}")
+        return
+
     user_name = update.effective_user.first_name
     logger.info(f"🚀 /start command used by {user_name}")
     await update.message.reply_text(
@@ -96,12 +126,20 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def ping_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Test command"""
+    if not is_authorized(update):
+        return
+        
     logger.info(f"📥 Received Ping! Chat ID: {update.effective_chat.id}")
-    await update.message.reply_text("Pong! 🏓 Bot 100% zinda hai! Sabhi groups me allowed hoon.")
+    await update.message.reply_text("Pong! 🏓 Bot 100% zinda hai aur sirf is group/admin ke liye kaam kar raha hai.")
 
 # ================= TELEGRAM HANDLER =================
 async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
+        return
+
+    # Security Check
+    if not is_authorized(update):
+        logger.warning(f"Unauthorized message attempt from User: {update.message.from_user.id} in Chat: {update.effective_chat.id}")
         return
 
     chat_id = update.effective_chat.id
