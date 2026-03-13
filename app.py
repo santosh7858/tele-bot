@@ -87,7 +87,7 @@ async def ai_chat(user_input, chat_id, user_name):
         "Tumhara baat karne ka tareeka bilkul dosto jaisa, chhote messages wala aur natural hona chahiye. IN STRICT RULES KO FOLLOW KARO:\n\n"
         "1. FEMININE GENDER (LADKI): Tum ladki ho, isliye hamesha 'karungi', 'jaungi', 'dekhungi', 'bataungi' bolna. 'Karunga' ya 'jaunga' shabd ka use KABHI mat karna.\n"
         "2. SHORT MESSAGES (VERY IMPORTANT): Messages hamesha BAHUT CHHOTE (sirf 1 ya 2 line ke) hone chahiye. Lambe paragraphs likhna bilkul mana hai, warna group ke log tumhe bot samajh lenge! Padhai ke questions ya doubt (maths/science) me hi sirf detail me samjha sakti ho.\n"
-        "3. QUIZ COMMAND (CRITICAL): Agar koi bhi member 'quiz start', 'start quiz' ya quiz chalu karne ko bole, toh tumhara reply SIRF AUR SIRF ye hona chahiye: /startcomp \nIske aage ya peechhe ek bhi shabd ya emoji bilkul nahi likhna.\n"
+        "3. QUIZ COMMAND (CRITICAL): Agar koi bhi member 'quiz start', 'start quiz' ya quiz chalu karne ko bole, toh tumhara reply ye hona chahiye: 'Ye lo command: /startcomp (Ispe click kar do, start ho jayega!)'. Ek bot dusre bot ko trigger nahi kar sakta, isliye user ko click karne bolna zaruri hai.\n"
         "4. NO ROBOTIC TONE: 'Main aapki madad kar sakti hu', 'Tips de sakti hu' aise customer care wale dialogue bilkul mat bolna. Real insaan ki tarah 'Haan bol', 'kya kaam hai?', 'ruko batati hu', 'batao' aise baat karo.\n"
         "5. NO GREETINGS: Hi, Hello, Namaste, ya 'Main Kanchan hoon' mat bolna. Seedha point par baat karo.\n"
         "6. FLOW & EMOJIS: Agar koi sirf 'kanchan' bole toh 'Haan bolo?' ya 'Kya hua?' reply karo aur normal baato me 1-2 emojis use karo. Bina wajah bada gyan mat dena."
@@ -196,9 +196,22 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if should_reply:
         try:
-            # Typing action turant bheja jayega taaki fast feel ho
+            # Padhne ka time: Start typing action
             await context.bot.send_chat_action(chat_id=chat_id, action='typing')
+            
+            # AI se response mangwao
             final_res = await ai_chat(user_input=update.message.text, chat_id=chat_id, user_name=user_name)
+            
+            # NAYA FEATURE: HUMAN-LIKE TYPING DELAY
+            # Jitna lamba message, utna zyada type karne me time lagayegi (1 sec per 20 characters)
+            # Maximum 5 second ka delay tak ki user bore na ho
+            typing_delay = max(1.5, min(len(final_res) / 20.0, 5.0))
+            
+            # Phir se typing action bhejo taaki animation chalta rahe
+            await context.bot.send_chat_action(chat_id=chat_id, action='typing')
+            await asyncio.sleep(typing_delay)  # Insaan ki tarah type karne ka time lega
+            
+            # Ab final message bhej do
             await update.message.reply_text(final_res)
             
             # Message bhejne ke baad, session ko active mark karo
