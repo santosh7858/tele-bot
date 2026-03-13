@@ -104,6 +104,30 @@ class GroqKeyManager:
 key_manager = GroqKeyManager()
 
 # ==============================================================================
+# SECURITY CHECK (MISSING FUNCTION ADDED BACK)
+# ==============================================================================
+def is_authorized(update: Update) -> bool:
+    """Check karta hai ki user ya group authorized hai ya nahi"""
+    if not update.effective_chat or not update.effective_user:
+        return False
+        
+    chat_id = update.effective_chat.id
+    chat_type = update.effective_chat.type
+    user_id = update.effective_user.id
+
+    if chat_type == "private":
+        return user_id == Config.ADMIN_ID
+    elif chat_type in ["group", "supergroup"]:
+        # Taki tum check kar sako ki Group ID match ho raha hai ya nahi
+        if chat_id == Config.ALLOWED_GROUP_ID:
+            return True
+        else:
+            logger.warning(f"Unauthorized Group ID detected: {chat_id}. Allowed is: {Config.ALLOWED_GROUP_ID}")
+            return False
+            
+    return False
+
+# ==============================================================================
 # 5. AI PERSONA & EMOTIONAL INTELLIGENCE
 # ==============================================================================
 class KanchanPersona:
@@ -172,17 +196,16 @@ class KanchanBrain:
         if is_reply_to_bot:
             return True
             
-        # 3. Agar kisi ne directly naam liya ho (exact word match)
-        words = re.findall(r'\b\w+\b', text_lower)
-        if any(name in words for name in self.bot_names):
+        # 3. Agar kisi ne directly naam liya ho (aasaan Substring search)
+        if any(name in text_lower for name in self.bot_names):
             return True
             
         # 4. Agar quiz start karne ko bola gaya ho
-        if any(word in words for word in self.quiz_keywords):
+        if any(word in text_lower for word in self.quiz_keywords):
             return True
             
         # 5. Agar group me koi general padhai ka question puch raha ho aur question mark ho
-        if "?" in text and any(word in words for word in self.study_keywords):
+        if "?" in text and any(word in text_lower for word in self.study_keywords):
             # Exclude if it looks like they are talking to someone else specific
             # jaise "Rahul iska answer batao?" -> aisi condition filter karna mushkil hai par we can try
             return True
