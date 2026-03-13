@@ -31,10 +31,6 @@ ALLOWED_GROUP_ID = int(os.environ.get("ALLOWED_GROUP_ID", "-1003706444239"))
 SILENCED_USERS = {}
 CHAT_HISTORY = {} 
 
-# NAYA FEATURE: Active Sessions track karega taaki baar baar naam na lena pade
-ACTIVE_SESSIONS = {}
-SESSION_TIMEOUT = 180  # 3 minute tak conversation active rahegi
-
 def get_all_api_keys():
     keys = []
     primary = os.environ.get("GROQ_API_KEY")
@@ -163,35 +159,22 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id in SILENCED_USERS and current_time < SILENCED_USERS[user_id]:
         return
 
-    # Trigger keyword update kar diya gaya hai
+    # Trigger keywords
     bot_name = "kanchan"
     study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths", "chemistry", "question", "sawal"]
-    fun_keywords = ["comedy", "joke", "haha", "hehe", "lol", "pyaar", "love", "gf", "bf", "movie", "song", "mazak", "masti", "entertainment"]
     
     is_reply_to_bot = False
     if update.message.reply_to_message and update.message.reply_to_message.from_user.id == context.bot.id:
         is_reply_to_bot = True
         
-    # Check if this user is in an active session with the bot (within last 3 mins)
-    is_active_session = False
-    if chat_id in ACTIVE_SESSIONS:
-        session = ACTIVE_SESSIONS[chat_id]
-        if session["user_id"] == user_id and (current_time - session["timestamp"] < SESSION_TIMEOUT):
-            is_active_session = True
-    
     should_reply = False
     
-    # Ab ye 'kanchan' word par trigger hoga
+    # Sirf in exact conditions par hi bot bolegi
     if bot_name in text or is_reply_to_bot or chat_type == "private": 
         should_reply = True
-    elif is_active_session:
-        # Agar user ne picchle 3 minute me bot se baat ki hai, toh seedha reply karega bina naam liye!
-        should_reply = True
-    elif any(word in text for word in study_keywords): 
-        should_reply = True
-    elif any(word in text for word in fun_keywords): 
-        should_reply = True
     elif "?" in text:
+        should_reply = True
+    elif any(word in text.split() for word in study_keywords): # split() ensures exact word match
         should_reply = True
 
     if should_reply:
@@ -214,11 +197,6 @@ async def handle_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Ab final message bhej do
             await update.message.reply_text(final_res)
             
-            # Message bhejne ke baad, session ko active mark karo
-            ACTIVE_SESSIONS[chat_id] = {
-                "user_id": user_id,
-                "timestamp": current_time
-            }
         except Exception as e:
             logger.error(f"Handler Error: {e}")
 
