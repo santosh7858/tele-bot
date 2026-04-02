@@ -30,7 +30,7 @@ class Config:
     """Sari settings aur configuration yahan store hongi."""
     TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
     ADMIN_ID = int(os.environ.get("ADMIN_ID", "6527942155"))
-    ALLOWED_GROUP_ID = int(os.environ.get("ALLOWED_GROUP_ID", "-1003706444239"))
+    ALLOWED_GROUP_ID = int(os.environ.get("ALLOWED_GROUP_ID", "-1003706444239,1003756676556"))
     PORT = int(os.environ.get("PORT", 10000))
     # AI Model Settings
     AI_MODEL = "llama-3.1-8b-instant"
