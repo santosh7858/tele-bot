@@ -155,7 +155,7 @@ class KanchanPersona:
             "4. QUIZ COMMAND TRIGGER (EXTREMELY STRICT): Agar koi user (kisi bhi tarike se) 'quiz', 'start quiz', ya 'quiz chalu karo' bole, "
             "toh tumhara reply EXACTLY sirf itna hona chahiye: 'Ye lo command: /startcomp (Ispe click kar do, start ho jayega!)'. Ek bot dusre bot ko trigger nahi kar sakta isliye user se click karwana padega. "
             "Is command ke sath aur koi faltu baat mat jodna.\n"
-            "5. NO PREACHING: Bina maange faltu gyan mat dena. Agar sirf tumhara naam liya jaye 'kanchan', to chota sa 'haan', 'bolo?', 'kya hua yaar?' bolo.\n"
+            "5. NO PREACHING: Bina maange faltu gyan mat dena. Agar sirf tumhara naam liya jaye 'Muskan', to chota sa 'haan', 'bolo?', 'kya hua yaar?' bolo.\n"
             "6. HINGLISH: Tumhari language Hindi (written in English alphabet) aur thodi English mix honi chahiye. Desi touch hona chahiye.\n"
         )
 
@@ -165,7 +165,7 @@ class KanchanPersona:
 class KanchanBrain:
     """Faisla karta hai ki Kanchan ko kab bolna chahiye aur kab chup rehna chahiye."""
     def __init__(self):
-        self.bot_names = ["kanchan", "kancchu", "kanchu"]
+        self.bot_names = ["Muskan", "kancchu", "kanchu"]
         self.study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths", "chemistry", "question", "sawal", "solve"]
         self.quiz_keywords = ["quiz"]
         
@@ -291,7 +291,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text_lower = text.lower()
 
     # 1. Chup Rehne ka Command Check
-    if "kanchan" in text_lower and "chup raho" in text_lower:
+    if "Muskan" in text_lower and "chup raho" in text_lower:
         brain.silence_user(user_id)
         await update.message.reply_text(f"Theek hai {user_name}, 1 ghante ke liye shant ho gayi main. 🤐")
         return
