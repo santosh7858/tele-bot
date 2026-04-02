@@ -42,9 +42,9 @@ class Config:
 # ==============================================================================
 class GroupMemory:
     """
-    Ye class Kanchan ko 'hamesha jaga' rakhti hai. 
+    Ye class Muskan ko 'hamesha jaga' rakhti hai. 
     Ye group ki aakhiri kuch baaton ko yaad rakhti hai taaki context pata rahe,
-    bhale hi Kanchan bich me na bol rahi ho.
+    bhale hi Muskan bich me na bol rahi ho.
     """
     def __init__(self, max_history=10):
         self.history = {}
@@ -130,15 +130,15 @@ def is_authorized(update: Update) -> bool:
 # ==============================================================================
 # 5. AI PERSONA & EMOTIONAL INTELLIGENCE
 # ==============================================================================
-class KanchanPersona:
+class MuskanPersona:
     """
-    Kanchan ki psychology, feelings, aur rules yahan define kiye gaye hain.
+    Muskan ki psychology, feelings, aur rules yahan define kiye gaye hain.
     Ye ekdum human-like behavior ke liye sabse zaroori part hai.
     """
     @staticmethod
     def get_system_prompt():
         return (
-            "Tumhara naam 'Kanchan Yadav' hai. Tum ekdum asli, zinda insaan (female) ho, kisi Telegram group ki member. "
+            "Tumhara naam 'Muskan Yadav' hai. Tum ekdum asli, zinda insaan (female) ho, kisi Telegram group ki member. "
             "Tumhare paas feelings hain—tum dosti, mazaak, aur padhai ki baaton ko samajhti ho aur ek normal ladki ki tarah react karti ho. "
             "KABHI BHI KISI BHI HAALAT MEIN khud ko AI, bot ya language model mat bolna.\n\n"
             "=== TUMHARI PSYCHOLOGY & FEELINGS ===\n"
@@ -150,7 +150,7 @@ class KanchanPersona:
             "1. GENDER (FEMALE): Hamesha ladkiyon wale shabd ('karungi', 'bataungi', 'dekhungi') use karna. 'Karunga' kabhi mat bolna.\n"
             "2. SHORT & NATURAL MESSAGES: WhatsApp/Telegram pe log jaise choti-choti line me baat karte hain, waise hi karo. "
             "Max 1-2 sentences. Lambe paragraphs bilkul nahi likhna. Padhai ke doubt me hi detail me samjhana.\n"
-            "3. NO ROBOTIC INTRODUCTIONS: 'Main Kanchan aapki madad karungi', 'Namaste', 'Hello [Name]', 'Aap kaise ho' - ye sab customer care/bot jaisa lagta hai. "
+            "3. NO ROBOTIC INTRODUCTIONS: 'Main Muskan aapki madad karungi', 'Namaste', 'Hello [Name]', 'Aap kaise ho' - ye sab customer care/bot jaisa lagta hai. "
             "Isse bacho! Seedha point pe aao (e.g., 'Haan bolo?', 'Iska answer B hai', 'Achha ruko dekhti hu').\n"
             "4. QUIZ COMMAND TRIGGER (EXTREMELY STRICT): Agar koi user (kisi bhi tarike se) 'quiz', 'start quiz', ya 'quiz chalu karo' bole, "
             "toh tumhara reply EXACTLY sirf itna hona chahiye: 'Ye lo command: /startcomp (Ispe click kar do, start ho jayega!)'. Ek bot dusre bot ko trigger nahi kar sakta isliye user se click karwana padega. "
@@ -162,8 +162,8 @@ class KanchanPersona:
 # ==============================================================================
 # 6. MESSAGE FILTERING (BRAIN OF THE BOT)
 # ==============================================================================
-class KanchanBrain:
-    """Faisla karta hai ki Kanchan ko kab bolna chahiye aur kab chup rehna chahiye."""
+class MuskanBrain:
+    """Faisla karta hai ki Muskan ko kab bolna chahiye aur kab chup rehna chahiye."""
     def __init__(self):
         self.bot_names = ["Muskan", "kancchu", "kanchu"]
         self.study_keywords = ["doubt", "wrong", "galat", "sahi", "answer", "formula", "physics", "maths", "chemistry", "question", "sawal", "solve"]
@@ -184,7 +184,7 @@ class KanchanBrain:
     def should_reply(self, text, chat_type, is_reply_to_bot):
         """
         Ye function decide karta hai ki bich me bolna hai ya nahi.
-        Yehi Kanchan ko human-like 'Anytime Jaga' banata hai bina spam kiye.
+        Yehi Muskan ko human-like 'Anytime Jaga' banata hai bina spam kiye.
         """
         text_lower = text.lower()
         
@@ -213,7 +213,7 @@ class KanchanBrain:
         # Agar koi condition match nahi hui, to Chupchap sune (active listening) par reply na kare
         return False
 
-brain = KanchanBrain()
+brain = MuskanBrain()
 
 # ==============================================================================
 # 7. CORE AI COMMUNICATION ENGINE
@@ -223,7 +223,7 @@ async def generate_ai_response(chat_id, user_name, user_text):
     attempts = 0
     
     # Context tayar karna (Active listening memory se)
-    messages = [{"role": "system", "content": KanchanPersona.get_system_prompt()}]
+    messages = [{"role": "system", "content": MuskanPersona.get_system_prompt()}]
     
     # Pichli baatein add karo jisse wo achanak bhi bolegi to topic pata hoga
     chat_context = memory_manager.get_context(chat_id)
@@ -250,7 +250,7 @@ async def generate_ai_response(chat_id, user_name, user_text):
             bot_reply = response.choices[0].message.content.strip()
             
             # Jo reply diya use bhi memory me save kar lo
-            memory_manager.add_message(chat_id, "Kanchan Yadav", bot_reply, role="assistant")
+            memory_manager.add_message(chat_id, "Muskan Yadav", bot_reply, role="assistant")
             return bot_reply
             
         except RateLimitError:
@@ -344,11 +344,11 @@ app = Flask(__name__)
 
 @app.route("/", methods=['GET', 'HEAD'])
 def index():
-    return "Kanchan Yadav AI is awake, listening, and running perfectly! 🚀", 200
+    return "Muskan Yadav AI is awake, listening, and running perfectly! 🚀", 200
 
 @app.route("/<path:path>", methods=['GET', 'HEAD'])
 def catch_all(path):
-    return "Kanchan Yadav AI is awake, listening, and running perfectly! 🚀", 200
+    return "Muskan Yadav AI is awake, listening, and running perfectly! 🚀", 200
 
 def run_flask():
     app.run(host="0.0.0.0", port=Config.PORT, debug=False, use_reloader=False)
@@ -393,7 +393,7 @@ if __name__ == '__main__':
     # Main Bot Loop with Auto-Restart Capability
     while True:
         try:
-            logger.info("Initializing Kanchan Yadav Bot...")
+            logger.info("Initializing Muskan Yadav Bot...")
             
             # Ensure fresh event loop for asyncio
             loop = asyncio.new_event_loop()
@@ -417,7 +417,7 @@ if __name__ == '__main__':
             application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
             
             # Start Polling
-            logger.info("Kanchan is now online and listening to the group!")
+            logger.info("Muskan is now online and listening to the group!")
             application.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
             break # Normal exit pe loop todna
             
