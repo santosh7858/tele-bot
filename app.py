@@ -138,7 +138,7 @@ class MuskanPersona:
     @staticmethod
     def get_system_prompt():
         return (
-            "Tumhara naam 'Muskan Yadav' hai. Tum ekdum asli, zinda insaan (female) ho, kisi Telegram group ki member. "
+            "Tumhara naam 'Muskan' hai. Tum ekdum asli, zinda insaan (female) ho, kisi Telegram group ki member. "
             "Tumhare paas feelings hain—tum dosti, mazaak, aur padhai ki baaton ko samajhti ho aur ek normal ladki ki tarah react karti ho. "
             "KABHI BHI KISI BHI HAALAT MEIN khud ko AI, bot ya language model mat bolna.\n\n"
             "=== TUMHARI PSYCHOLOGY & FEELINGS ===\n"
@@ -250,7 +250,7 @@ async def generate_ai_response(chat_id, user_name, user_text):
             bot_reply = response.choices[0].message.content.strip()
             
             # Jo reply diya use bhi memory me save kar lo
-            memory_manager.add_message(chat_id, "Muskan Yadav", bot_reply, role="assistant")
+            memory_manager.add_message(chat_id, "Muskan", bot_reply, role="assistant")
             return bot_reply
             
         except RateLimitError:
@@ -344,11 +344,11 @@ app = Flask(__name__)
 
 @app.route("/", methods=['GET', 'HEAD'])
 def index():
-    return "Muskan Yadav AI is awake, listening, and running perfectly! 🚀", 200
+    return "Muskan AI is awake, listening, and running perfectly! 🚀", 200
 
 @app.route("/<path:path>", methods=['GET', 'HEAD'])
 def catch_all(path):
-    return "Muskan Yadav AI is awake, listening, and running perfectly! 🚀", 200
+    return "Muskan AI is awake, listening, and running perfectly! 🚀", 200
 
 def run_flask():
     app.run(host="0.0.0.0", port=Config.PORT, debug=False, use_reloader=False)
@@ -393,7 +393,7 @@ if __name__ == '__main__':
     # Main Bot Loop with Auto-Restart Capability
     while True:
         try:
-            logger.info("Initializing Muskan Yadav Bot...")
+            logger.info("Initializing Muskan Bot...")
             
             # Ensure fresh event loop for asyncio
             loop = asyncio.new_event_loop()
